@@ -6,24 +6,45 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+
+	"github.com/nikubayasi/go-project/cmd/pkg/config"
+	"github.com/nikubayasi/go-project/cmd/pkg/models"
 )
 
-func RenderTemplate(w http.ResponseWriter, tmpl string) {
-	// create a template cache
-	tc, err := CreateTemplateCache()
-	if err != nil {
-		log.Fatal(err)
+// var functions = template.FuncMap{}
+
+var app *config.AppConfig
+
+func NewTemplate(a *config.AppConfig) {
+	app = a
+}
+
+func AddDefaultData(td *models.TemplateData) *models.TemplateData {
+	return td
+}
+
+func RenderTemplate(w http.ResponseWriter, tmpl string, td *models.TemplateData) {
+	var tc map[string]*template.Template
+
+	if app.UseCache {
+		tc = app.TemplateCache
+	} else {
+		tc, _ = CreateTemplateCache()
 	}
+	// create a template cache
 
 	//get requested template from cache
 	t, ok := tc[tmpl]
 	if !ok {
-		log.Fatal(err)
+		log.Fatal("Could not get template from template cache")
 	}
 
 	buf := new(bytes.Buffer)
 
-	err = t.Execute(buf, nil)
+	td = AddDefaultData(td)
+	_ = t.Execute(buf, td)
+
+	_, err := buf.WriteTo(w)
 	if err != nil {
 		log.Println(err)
 	}
